@@ -1,0 +1,55 @@
+{
+  "name": "agent-ui-guard",
+  "version": "0.1.0",
+  "description": "Property-based UI and tool-call invariant E2E testing harness for streaming AI agent apps. Chaos-fuzz your chat UI with Playwright and catch double modals, stuck streams, orphan tool spinners and 5xx responses before your users do.",
+  "keywords": [
+    "playwright",
+    "testing",
+    "invariants",
+    "property-based-testing",
+    "fuzzing",
+    "llm",
+    "ai-agents",
+    "streaming",
+    "e2e",
+    "chaos-testing"
+  ],
+  "license": "MIT",
+  "type": "module",
+  "engines": {
+    "node": ">=20"
+  },
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    }
+  },
+  "files": [
+    "dist",
+    "README.md",
+    "LICENSE"
+  ],
+  "scripts": {
+    "build": "tsc -p tsconfig.build.json",
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "test": "npm run test:unit",
+    "test:unit": "vitest run",
+    "test:e2e": "playwright test",
+    "test:all": "npm run typecheck && npm run test:unit && npm run test:e2e",
+    "demo": "tsx demo/serve.ts",
+    "fuzz:demo": "tsx scripts/fuzz-demo.ts"
+  },
+  "peerDependencies": {
+    "@playwright/test": ">=1.45.0"
+  },
+  "devDependencies": {
+    "@playwright/test": "1.65.0",
+    "@types/node": "^22.0.0",
+    "tsx": "^4.20.0",
+    "typescript": "^5.9.0",
+    "vitest": "^3.2.0"
+  }
+}

@@ -1,0 +1,69 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>chat-desk · agent-ui-guard fixture</title>
+    <link rel="icon" href="data:," />
+    <link rel="stylesheet" href="/styles.css" />
+  </head>
+  <body data-mode="__DEMO_MODE__">
+    <div class="app">
+      <aside class="sidebar">
+        <div class="brand"><span class="logo">◆</span> chat-desk <span class="tag">fixture</span></div>
+        <button id="new-session" class="new-session" type="button">+ New session</button>
+        <nav aria-label="Sessions">
+          <ul id="session-list" class="sessions"></ul>
+        </nav>
+        <button id="open-settings" class="ghost sidebar-foot" type="button">Settings</button>
+      </aside>
+
+      <main class="main">
+        <header class="topbar">
+          <div>
+            <h1 id="session-title">Release notes</h1>
+            <p class="sub">Streaming agent · SSE · fixture</p>
+          </div>
+          <button id="open-palette" class="ghost" type="button" aria-keyshortcuts="Control+K">⌘K Commands</button>
+        </header>
+
+        <section id="transcript" class="transcript" aria-live="polite" aria-label="Conversation"></section>
+
+        <form id="composer" class="composer">
+          <label class="sr-only" for="composer-input">Message</label>
+          <textarea id="composer-input" rows="1" placeholder="Ask the agent…" autocomplete="off"></textarea>
+          <button id="send" type="submit" class="send">Send</button>
+          <button id="cancel-turn" type="button" class="danger" hidden>Stop</button>
+        </form>
+      </main>
+    </div>
+
+    <div id="settings-dialog" class="modal" role="dialog" aria-modal="true" aria-label="Settings" hidden>
+      <div class="modal-card">
+        <h2>Settings</h2>
+        <label class="field"><input type="checkbox" checked /> Stream responses</label>
+        <label class="field"><input type="checkbox" checked /> Show tool calls</label>
+        <div class="modal-actions">
+          <button class="ghost" type="button" data-close="settings-dialog">Close</button>
+        </div>
+      </div>
+    </div>
+
+    <div id="palette" class="modal" role="dialog" aria-modal="true" aria-label="Command palette" hidden>
+      <div class="modal-card">
+        <h2>Command palette</h2>
+        <input id="palette-input" placeholder="Type a command…" autocomplete="off" />
+        <ul class="commands">
+          <li>New session</li>
+          <li>Toggle tool calls</li>
+          <li>Open settings</li>
+        </ul>
+        <div class="modal-actions">
+          <button class="ghost" type="button" data-close="palette">Close</button>
+        </div>
+      </div>
+    </div>
+
+    <script src="/app.js"></script>
+  </body>
+</html>
