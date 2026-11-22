@@ -95,7 +95,7 @@ test('agent chat UI survives 40 random actions', async ({ page }) => {
 });
 ```
 
-테스트 프레임워크가 없어도 됩니까? `runExploration`은 결과 객체를 돌려주므로 그냥 Node 스크립트에서 호출해도 됩니다(`scripts/fuzz-demo.ts` 참고).
+테스트 프레임워크가 없어도 되나요? `runExploration`은 결과 객체를 돌려주므로 그냥 Node 스크립트에서 호출해도 됩니다(`scripts/fuzz-demo.ts` 참고).
 
 ## DOM 계약
 
