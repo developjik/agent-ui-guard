@@ -1,4 +1,4 @@
-import { mkdir, readFile, writeFile } from 'node:fs/promises';
+import { mkdir, mkdtemp, readFile, writeFile } from 'node:fs/promises';
 import path from 'node:path';
 import type { Page } from '@playwright/test';
 import { generateReproSpec, parseTrace, traceToMarkdown } from './trace.js';
@@ -14,7 +14,8 @@ export interface ArtifactPaths {
 }
 
 function runFolder(trace: TraceFile): string {
-  const stamp = trace.createdAt.replace(/[-:]/g, '').replace(/\..+$/, '').replace('T', '-');
+  // Milliseconds stay in the stamp — two runs in the same second must not collide.
+  const stamp = trace.createdAt.replace(/[-:]/g, '').replace('T', '-').replace(/[.Z]/g, '');
   return `run-${stamp}-seed${trace.seed}${trace.violation ? '-failed' : ''}`;
 }
 
@@ -29,8 +30,11 @@ export async function writeArtifacts(options: {
   page?: Page;
   screenshot?: boolean;
 }): Promise<ArtifactPaths> {
-  const dir = path.join(options.outputDir, runFolder(options.trace));
-  await mkdir(dir, { recursive: true });
+  // mkdtemp creates the leaf atomically: a same-second/same-seed run or a
+  // parallel one gets its own directory instead of silently overwriting the
+  // trace/report/repro of an earlier run.
+  await mkdir(options.outputDir, { recursive: true });
+  const dir = await mkdtemp(path.join(options.outputDir, `${runFolder(options.trace)}-`));
 
   const tracePath = path.join(dir, 'trace.json');
   const reportPath = path.join(dir, 'report.md');

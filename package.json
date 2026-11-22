@@ -1,6 +1,6 @@
 {
   "name": "agent-ui-guard",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "Property-based UI and tool-call invariant E2E testing harness for streaming AI agent apps. Chaos-fuzz your chat UI with Playwright and catch double modals, stuck streams, orphan tool spinners and 5xx responses before your users do.",
   "repository": {
     "type": "git",
