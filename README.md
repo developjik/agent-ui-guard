@@ -1,5 +1,7 @@
 # agent-ui-guard
 
+[한국어](README.ko.md) · English
+
 **Property-based UI and tool-call invariant testing for streaming AI agent apps.**
 
 [![CI](https://github.com/developjik/agent-ui-guard/actions/workflows/ci.yml/badge.svg)](https://github.com/developjik/agent-ui-guard/actions/workflows/ci.yml)
