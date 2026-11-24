@@ -1,3 +1,4 @@
+import { recordWebSockets, type StreamMapper } from './transport.js';
 import type { ConsoleMessage, Page, Response } from '@playwright/test';
 import { resolveContract } from './contract.js';
 import { buildRuntimeScript, RUNTIME_GLOBAL } from './runtime.js';
@@ -11,6 +12,8 @@ import type {
 } from './types.js';
 
 export interface GuardOptions {
+  /** Opt-in because wire frames may contain sensitive app data. */
+  webSocket?: boolean | { map?: StreamMapper };
   /** Override parts of the DOM contract. */
   contract?: Partial<GuardContract>;
   /** How long the UI may stay busy before `settle()` gives up. Default 5000ms. */
@@ -33,6 +36,7 @@ export interface NodeObservations {
   consoleErrors: ConsoleErrorRecord[];
   pageErrors: PageErrorRecord[];
   http5xx: HttpErrorRecord[];
+  transportFrames?: import('./transport.js').TransportFrame[];
 }
 
 const sleep = (ms: number): Promise<void> =>
@@ -86,6 +90,10 @@ export class Guard {
       // script still runs on the first real navigation.
     }
     guard.attach();
+    if (options.webSocket) {
+      guard.node.transportFrames = [];
+      guard.listeners.push(recordWebSockets(page, { ...(typeof options.webSocket === 'object' ? options.webSocket : {}), onFrame: frame => guard.node.transportFrames!.push(frame) }));
+    }
     return guard;
   }
 
@@ -177,6 +185,7 @@ export class Guard {
       consoleErrors: this.node.consoleErrors.slice(),
       pageErrors: this.node.pageErrors.slice(),
       http5xx: this.node.http5xx.slice(),
+      ...(this.node.transportFrames ? { transportFrames: this.node.transportFrames.slice() } : {}),
     };
   }
 
@@ -186,13 +195,20 @@ export class Guard {
       consoleErrors: this.node.consoleErrors.slice(),
       pageErrors: this.node.pageErrors.slice(),
       http5xx: this.node.http5xx.slice(),
+      ...(this.node.transportFrames ? { transportFrames: this.node.transportFrames.slice() } : {}),
     };
+  }
+
+  /** Replay routes do not emit Playwright websocket events. Pass this as onFrame. */
+  recordTransportFrame(frame: import('./transport.js').TransportFrame): void {
+    (this.node.transportFrames ??= []).push(structuredClone(frame));
   }
 
   clearNodeObservations(): void {
     this.node.consoleErrors.length = 0;
     this.node.pageErrors.length = 0;
     this.node.http5xx.length = 0;
+    if (this.node.transportFrames) this.node.transportFrames.length = 0;
   }
 
   async reset(): Promise<void> {
