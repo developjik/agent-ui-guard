@@ -31,6 +31,7 @@ export async function runCase({browser,streamscope,scenario='',seed=1337,outputD
   // Block everything except the two owned loopback servers, even in this synthetic fixture.
   await page.route('**/*',route=>{const u=new URL(route.request().url());return (u.origin===new URL(url).origin||u.origin===new URL(replay.streamUrl).origin)?route.continue():route.abort();});
   const result=await runExploration({page,url,actions:[{name:'replay',async run({page}){await page.locator('#replay').click();}}],plan:manifest.actions,invariants:[noStuckStreaming({maxStreamMs:900})],seed,settleTimeoutMs:1200,activityGraceMs:100,outputDir:dir,screenshotOnFailure:true});
+  if(scenario==='slow(450)'){await page.waitForFunction(()=>document.querySelector('#status')?.textContent==='Complete',undefined,{timeout:5000});await page.screenshot({path:path.join(dir,'delayed-complete.png')});manifest.eventualFinish=true;manifest.finalBusy=await page.locator('#turn').getAttribute('data-streaming');}
   Object.assign(manifest,{status:'complete',ok:result.ok,violation:result.violation,guardArtifacts:result.artifacts?path.relative(dir,result.artifacts.dir):null,actualActions:result.steps.map(({action,params,ok})=>({action,params,ok})),outcome:replay.plan.outcome});
   await writeFile(path.join(dir,'manifest.json'),JSON.stringify(manifest,null,2)+'\n');
   return {dir,manifest,result};
