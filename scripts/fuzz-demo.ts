@@ -36,6 +36,7 @@ const result = await runExploration({
       return (await last.count()) > 0 && ((await last.innerText()) ?? '').length > 20;
     }).within(6_000),
   ],
+  shrink: process.argv.includes('--shrink'),
   seed,
   steps,
   settleTimeoutMs: 4_000,
@@ -48,6 +49,9 @@ const result = await runExploration({
     );
   },
 });
+
+if (result.shrink) console.log(`shrink: ${result.shrink.status} (${result.shrink.originalSteps} -> ${result.shrink.reducedSteps} steps, ${result.shrink.attempts} attempts)${result.shrink.reason ? ': ' + result.shrink.reason : ''}`);
+if (result.shrink?.artifacts) console.log(`shrunk repro: ${result.shrink.artifacts.repro}`);
 
 await browser.close();
 await demo.close();
