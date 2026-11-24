@@ -22,7 +22,7 @@ STREAMSCOPE_ENTRY=../streamscope-chaos-companion/dist/index.js node examples/str
 The script runs four fresh contexts with the same seed, action plan and `noStuckStreaming(maxStreamMs:900)` invariant:
 
 - Recorded control: completes and clears busy.
-- `slow(450)`: delayed finish crosses the fixture's900ms limit.
+- `slow(450)`: delayed finish crosses the fixture's900ms limit; the adapter then separately waits for the actual finish and saves a second screenshot proving busy cleared.
 - `disconnect_at(0.5)`: no finish arrives, leaving the intentionally buggy fixture busy.
 - Identical disconnect repetition: must find the same invariant at the same action step.
 
