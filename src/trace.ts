@@ -133,6 +133,7 @@ export function parseTrace(value: unknown): TraceFile {
       consoleErrors: file.observations?.consoleErrors ?? [],
       pageErrors: file.observations?.pageErrors ?? [],
       http5xx: file.observations?.http5xx ?? [],
+      ...(file.observations?.transportFrames ? { transportFrames: file.observations.transportFrames } : {}),
     },
   };
 }
