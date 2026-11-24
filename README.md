@@ -420,3 +420,9 @@ for a small sequence, not a mathematical global minimum. Matching uses invariant
 name/kind, not unstable message text; an exception in a check is not a reproduction.
 The generated spec keeps the existing template: set its ACTIONS import and use
 the original custom invariants/context setup if applicable before running it.
+
+`writeArtifacts: false` also suppresses reduced files; the shrink status and counts
+are still returned. Recorded WebSocket frames are replayed in their original
+request order without contacting the live server. Removing a prerequisite request
+can reject a later request, so transport-dependent sequences may not shrink fully.
+The demo answer-completion check is armed only after an assistant answer exists.
