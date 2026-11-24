@@ -57,12 +57,12 @@ export async function shrinkTrace(input: {
           ...input.run, page, url: input.trace.url, seed: input.trace.seed, plan, steps: plan.length,
           ...(input.trace.observations.transportFrames ? { transportReplay: input.trace.observations.transportFrames } : {}),
           shrink: false, writeArtifacts: false, throwOnViolation: false, onStep: undefined, onViolation: undefined,
-          gotoOptions: { ...input.run.gotoOptions, timeout: Math.max(1, deadline - Date.now()) },
+          gotoOptions: { ...(input.run.gotoOptions ?? { waitUntil: 'domcontentloaded' }), timeout: Math.max(1, deadline - Date.now()) },
           timeBudgetMs: Math.max(1, deadline - Date.now()),
         });
         if (expired || Date.now() + 10 >= deadline) throw new Error('shrink-timeout');
         const matched = result.violation?.invariant === target.invariant && result.violation?.kind === target.kind && !result.violation?.message.startsWith('check threw:');
-        if (matched && publish) {
+        if (matched && publish && input.run.writeArtifacts !== false) {
           const trace: TraceFile = { ...input.trace, createdAt: new Date().toISOString(), finishedAt: new Date().toISOString(), steps: result.steps, violation: result.violation, observations: { consoleErrors: result.ledger?.consoleErrors ?? [], pageErrors: result.ledger?.pageErrors ?? [], http5xx: result.ledger?.http5xx ?? [], ...(input.trace.observations.transportFrames ? { transportFrames: input.trace.observations.transportFrames } : {}) } };
           published = await writeArtifacts({ outputDir: `${input.run.outputDir ?? '.agent-ui-guard'}/shrunk`, trace, page, screenshot: input.run.screenshotOnFailure !== false });
         }
