@@ -9,9 +9,10 @@ import {
   runExploration,
 } from '../src/index.js';
 
-const mode = (process.argv[2] ?? 'healthy') as DemoMode;
-const steps = Number(process.argv[3] ?? 30);
-const seed = Number(process.argv[4] ?? 20261121);
+const args = process.argv.slice(2).filter(arg => arg !== '--shrink');
+const mode = (args[0] ?? 'healthy') as DemoMode;
+const steps = Number(args[1] ?? 30);
+const seed = Number(args[2] ?? 20261121);
 
 if (!DEMO_MODES.includes(mode)) {
   console.error(`Unknown mode "${mode}". Use one of: ${DEMO_MODES.join(', ')}`);
@@ -33,9 +34,11 @@ const result = await runExploration({
     ),
     eventually('assistant answer completes', async ({ page: p }) => {
       const last = p.locator('[data-role="assistant"] .content').last();
-      return (await last.count()) > 0 && ((await last.innerText()) ?? '').length > 20;
+      if (await last.count() === 0) return true;
+      return ((await last.innerText()) ?? '').length > 20;
     }).within(6_000),
   ],
+  shrink: process.argv.includes('--shrink'),
   seed,
   steps,
   settleTimeoutMs: 4_000,
@@ -48,6 +51,9 @@ const result = await runExploration({
     );
   },
 });
+
+if (result.shrink) console.log(`shrink: ${result.shrink.status} (${result.shrink.originalSteps} -> ${result.shrink.reducedSteps} steps, ${result.shrink.attempts} attempts)${result.shrink.reason ? ': ' + result.shrink.reason : ''}`);
+if (result.shrink?.artifacts) console.log(`shrunk repro: ${result.shrink.artifacts.repro}`);
 
 await browser.close();
 await demo.close();

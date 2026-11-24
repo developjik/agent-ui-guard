@@ -35,3 +35,5 @@ export {
 export { TOOL_VERSION } from './version.js';
 
 export * from './transport.js';
+
+export * from './shrink.js';

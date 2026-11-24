@@ -380,3 +380,49 @@ Playwright's mocked WebSockets do not emit passive frame events. For replay vali
 ## Development baseline (DEV-128)
 
 Use Node.js 22.12.0 (`.nvmrc`) for development and CI. Vitest 5.1.1 requires Node 22.12+ on its supported release lines; Node 20.19 is outside its declared development support range. It may execute there, but CI does not treat that as supported test-runner usage. This development requirement does not change the package engine declaration. Runtime compatibility must be checked using the built package, separately from the test runner. TypeScript 7.0.2 is the development compiler baseline.
+
+
+## Optional failure shrinking
+
+`runExploration({ ...options, shrink: true })` replays a failure in fresh browser
+contexts and removes action chunks while the same invariant name and kind still
+fail. Existing calls and original trace/report/repro formats are unchanged.
+Use this only against disposable test environments: replays perform real actions
+and can repeat server-side effects. Fresh contexts isolate browser storage, not
+server state, closures in action definitions, or external services. Authentication,
+custom context setup, and application reset hooks are not copied from the source
+context; an unreproducible baseline is reported rather than accepted.
+
+```ts
+const result = await runExploration({
+  page, url, actions, invariants,
+  shrink: { timeBudgetMs: 30_000, maxAttempts: 50 },
+});
+console.log(result.shrink);
+// npm run fuzz:demo -- double-modal 30 13 --shrink
+```
+
+The original artifacts always stay in their original run folder. Only a shorter
+candidate that passes a final replay gets separate `shrunk/run-.../trace.json`,
+`report.md`, `repro.spec.ts`, DOM and screenshot artifacts. `result.artifacts` and
+`result.steps` still describe the original failure. `result.shrink.artifacts`
+points to the reduced evidence. No onStep/onViolation callbacks run during replay.
+The original onViolation callback and throwOnViolation behavior run after shrinking.
+Passing runs do not shrink. A Browser-backed page is required.
+
+Statuses distinguish `reduced`, `unchanged`, `unreproducible`, `timed-out`,
+`attempt-limit`, and `error`. A budget, attempt limit, replay error, or a flaky final
+confirmation leaves the original evidence authoritative and publishes no successful
+reduction. The wall-clock deadline closes the replay context and stops waiting;
+arbitrary user callbacks that ignore page closure cannot be forcibly stopped in
+JavaScript. Artifact I/O and context teardown are best effort. The algorithm aims
+for a small sequence, not a mathematical global minimum. Matching uses invariant
+name/kind, not unstable message text; an exception in a check is not a reproduction.
+The generated spec keeps the existing template: set its ACTIONS import and use
+the original custom invariants/context setup if applicable before running it.
+
+`writeArtifacts: false` also suppresses reduced files; the shrink status and counts
+are still returned. Recorded WebSocket frames are replayed in their original
+request order without contacting the live server. Removing a prerequisite request
+can reject a later request, so transport-dependent sequences may not shrink fully.
+The demo answer-completion check is armed only after an assistant answer exists.

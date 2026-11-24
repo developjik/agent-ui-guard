@@ -2,6 +2,7 @@ import type { Page } from '@playwright/test';
 import type { ActionDefinition } from './actions.js';
 import { readTraceFile, writeArtifacts, type ArtifactPaths } from './artifacts.js';
 import { formatMs } from './analyze.js';
+import { shrinkTrace, type ShrinkOptions, type ShrinkResult } from './shrink.js';
 import { Guard } from './guard.js';
 import { replayWebSockets, type TransportFrame } from './transport.js';
 import { normalizeCheckResult } from './invariants.js';
@@ -37,6 +38,8 @@ export interface StepInfo {
 }
 
 export interface RunOptions {
+  /** Opt-in failure shrinking in isolated browser contexts. Original artifacts are always retained. */
+  shrink?: boolean | ShrinkOptions;
   webSocket?: import('./guard.js').GuardOptions['webSocket'];
   /** Mock recorded transport before navigation instead of contacting a WS server. */
   transportReplay?: TransportFrame[];
@@ -84,6 +87,7 @@ export interface RunOptions {
 }
 
 export interface RunResult {
+  shrink?: ShrinkResult;
   ok: boolean;
   seed: number;
   steps: TraceStep[];
@@ -266,6 +270,10 @@ export async function runExploration(options: RunOptions): Promise<RunResult> {
       ...(artifacts ? { artifacts } : {}),
       durationMs: Date.now() - startedAt,
     };
+    if (violation && options.shrink) {
+      const browser = page.context().browser();
+      result.shrink = browser ? await shrinkTrace({ trace: traceFile, browser, run: options, options: options.shrink === true ? {} : options.shrink }) : { status: 'error', reason: 'Shrinking requires a Browser-backed page', originalSteps: result.steps.length, reducedSteps: result.steps.length, attempts: 0, durationMs: 0 };
+    }
     if (violation) {
       options.onViolation?.(violation);
       if (options.throwOnViolation) {
