@@ -1,5 +1,5 @@
 import { expect, test } from 'vitest';
-import { normalizeStreamEvent, streamEventViolation } from '../src/transport.js';
+import { normalizeStreamEvent, streamEventViolation, replayWebSockets } from '../src/transport.js';
 import { parseTrace, TraceRecorder } from '../src/trace.js';
 test('mapper handles text/binary JSON and ignores unknown protocols',()=>{
  expect(normalizeStreamEvent(Buffer.from('{"type":"delta","runId":"r","delta":"hi"}'))).toMatchObject({type:'delta',delta:'hi'});
@@ -17,4 +17,10 @@ test('trace round-trip preserves opt-in transport frames and loads legacy traces
  const trace=recorder.toJSON({consoleErrors:[],pageErrors:[],http5xx:[],transportFrames:[frame]});
  expect(parseTrace(JSON.parse(JSON.stringify(trace))).observations.transportFrames).toEqual([frame]);
  delete trace.observations.transportFrames;expect(parseTrace(trace).observations.transportFrames).toBeUndefined();
+});
+
+test('replay validates before installing routes',async()=>{
+ const page={routeWebSocket:()=>{throw new Error('should not install')}} as never;
+ await expect(replayWebSockets(page,[],{speed:-1})).rejects.toThrow('speed');
+ await expect(replayWebSockets(page,[{transport:'websocket',connection:0,url:'ws://local',direction:'received',at:-1,encoding:'text',raw:''}])).rejects.toThrow('Invalid');
 });
