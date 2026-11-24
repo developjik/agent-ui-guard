@@ -355,7 +355,6 @@ Playwright runner.
 
 ## Roadmap
 
-- WebSocket transport tracing and request replay
 - Shadow DOM and iframe piercing
 - Shrinking: automatically minimize a failing trace, not just trim it at the violation
 - Multi-seed nightly mode with a seed corpus
@@ -363,3 +362,17 @@ Playwright runner.
 ## License
 
 MIT © 2026 jungingwon (developjik)
+
+## WebSocket recording and replay
+
+```ts
+const guard = await Guard.install(page, { webSocket: true }); // Before navigation.
+// Navigate and drive the app, then save guard.nodeObservations().transportFrames.
+await replayWebSockets(freshPage, frames, { onFrame: frame => replayGuard.recordTransportFrame(frame) });
+```
+
+Use a fresh page per replay and install `replayGuard = await Guard.install(freshPage)` before routing. `replayWebSockets` mocks connections with Playwright `routeWebSocket`, never calls the real server, and gates responses on exact recorded client frames. Optional `speed: 1` reproduces received-frame intervals. Text and binary payload bytes are preserved; connection close/control frames are not recorded or replayed. Connections not present in the recording close with code 1008. Routes last for that page's lifetime.
+
+Recording is opt-in because raw frames may contain private application data. Redact before saving/sharing a trace. Pass `webSocket: { map: payload => event }` for your protocol; the default mapper accepts JSON `{type, runId, id?, seq?, delta?}` with types `start`, `delta`, `tool-call`, `finish`, `error`. Unknown payloads remain raw frames. The transport-independent `streamEventViolation(events)` checks start order, duplicate event ids, increasing sequence numbers, and events after terminal states. `streamEventOrder()` is also included in built-in invariants and checks received mapped events per connection. It does not require a terminal state while a run is still active. Existing DOM invariants still catch stuck UI and orphan tool calls.
+
+Playwright's mocked WebSockets do not emit passive frame events. For replay validation, the `onFrame` callback above explicitly feeds the replay guard. Do not install a second recorder for the same routed traffic. Run `npm run test:all` for the WS demo's healthy recording/replay, order/duplicate/terminal violations, and existing SSE regression suite. The local demo source is `demo/websocket.ts`.

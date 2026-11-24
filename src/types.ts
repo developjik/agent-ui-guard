@@ -129,6 +129,7 @@ export interface GuardLedgerSnapshot extends PageSnapshot {
   consoleErrors: ConsoleErrorRecord[];
   pageErrors: PageErrorRecord[];
   http5xx: HttpErrorRecord[];
+  transportFrames?: import('./transport.js').TransportFrame[];
 }
 
 export type InvariantCheckResult =
@@ -200,5 +201,6 @@ export interface TraceFile {
     consoleErrors: ConsoleErrorRecord[];
     pageErrors: PageErrorRecord[];
     http5xx: HttpErrorRecord[];
+    transportFrames?: import('./transport.js').TransportFrame[];
   };
 }

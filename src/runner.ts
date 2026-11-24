@@ -3,6 +3,7 @@ import type { ActionDefinition } from './actions.js';
 import { readTraceFile, writeArtifacts, type ArtifactPaths } from './artifacts.js';
 import { formatMs } from './analyze.js';
 import { Guard } from './guard.js';
+import { replayWebSockets, type TransportFrame } from './transport.js';
 import { normalizeCheckResult } from './invariants.js';
 import type { NormalizedCheck } from './invariants.js';
 import { createRng } from './rng.js';
@@ -36,6 +37,9 @@ export interface StepInfo {
 }
 
 export interface RunOptions {
+  webSocket?: import('./guard.js').GuardOptions['webSocket'];
+  /** Mock recorded transport before navigation instead of contacting a WS server. */
+  transportReplay?: TransportFrame[];
   page: Page;
   /** Where the app under test lives. */
   url: string;
@@ -154,10 +158,13 @@ export async function runExploration(options: RunOptions): Promise<RunResult> {
 
   const guard = await Guard.install(page, {
     contract: options.contract,
+    webSocket: options.webSocket,
     settleTimeoutMs: options.settleTimeoutMs,
     activityGraceMs: options.activityGraceMs,
     ignoreErrors: options.ignoreErrors,
   });
+
+  if (options.transportReplay) await replayWebSockets(page, options.transportReplay, { onFrame: frame => guard.recordTransportFrame(frame) });
 
   const buildContext = (step: number, ledger: GuardLedgerSnapshot): InvariantContext => ({
     page,
@@ -352,6 +359,7 @@ export interface ReplayOptions {
 export async function replayTrace(options: ReplayOptions): Promise<RunResult> {
   return runExploration({
     page: options.page,
+    ...(options.trace.observations.transportFrames ? { transportReplay: options.trace.observations.transportFrames } : {}),
     url: options.trace.url,
     actions: options.actions,
     invariants: options.invariants ?? [],

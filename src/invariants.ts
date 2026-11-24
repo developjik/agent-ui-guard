@@ -1,3 +1,4 @@
+import { streamEventViolation } from './transport.js';
 import {
   findConsoleAndPageErrors,
   findHttp5xx,
@@ -167,6 +168,7 @@ export function builtinInvariants(options: BuiltinOptions = {}): Invariant[] {
     toolCallBalanced(options),
     noConsoleOrPageErrors(options),
     noHttp5xx(),
+    streamEventOrder(),
   ];
 }
 
@@ -245,4 +247,17 @@ export function normalizeCheckResult(
     ...(result.message !== undefined ? { message: result.message } : {}),
     ...(result.evidence !== undefined ? { evidence: result.evidence } : {}),
   };
+}
+
+/** Check received normalized stream events. Inert unless WS recording is enabled. */
+export function streamEventOrder(): Invariant {
+  return { name: 'streamEventOrder', kind: 'always', check: ({ ledger }) => {
+    const frames = ledger.transportFrames ?? [];
+    for (const connection of new Set(frames.map(frame => frame.connection))) {
+      const events = frames.filter(frame => frame.connection === connection && frame.direction === 'received' && frame.event).map(frame => frame.event!);
+      const message = streamEventViolation(events);
+      if (message) return { ok: false, message, evidence: { connection, events } };
+    }
+    return true;
+  } };
 }

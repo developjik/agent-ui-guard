@@ -133,6 +133,7 @@ export function parseTrace(value: unknown): TraceFile {
       consoleErrors: file.observations?.consoleErrors ?? [],
       pageErrors: file.observations?.pageErrors ?? [],
       http5xx: file.observations?.http5xx ?? [],
+      ...(file.observations?.transportFrames ? { transportFrames: file.observations.transportFrames } : {}),
     },
   };
 }
@@ -235,6 +236,7 @@ const PLAN = ${JSON.stringify(plan, null, 2)} as Array<{
 test(${JSON.stringify(title)}, async ({ page }) => {
   const result = await runExploration({
     page,
+    ${trace.observations.transportFrames ? `transportReplay: ${JSON.stringify(trace.observations.transportFrames)},` : ''}
     url: URL,
     actions: ACTIONS,
     plan: PLAN,
