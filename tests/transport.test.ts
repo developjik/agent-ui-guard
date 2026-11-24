@@ -24,3 +24,13 @@ test('replay validates before installing routes',async()=>{
  await expect(replayWebSockets(page,[],{speed:-1})).rejects.toThrow('speed');
  await expect(replayWebSockets(page,[{transport:'websocket',connection:0,url:'ws://local',direction:'received',at:-1,encoding:'text',raw:''}])).rejects.toThrow('Invalid');
 });
+
+test('binary mapper cannot mutate recorded wire bytes', async () => {
+ const { EventEmitter } = await import('node:events');
+ const { recordWebSockets } = await import('../src/transport.js');
+ const page = new EventEmitter(); const socket = Object.assign(new EventEmitter(), {url:()=> 'ws://local'});
+ const frames: unknown[]=[];
+ const detach=recordWebSockets(page as never,{map:payload=>{if(Buffer.isBuffer(payload)) payload.fill(0);return undefined;},onFrame:frame=>frames.push(frame)});
+ page.emit('websocket',socket);const bytes=Buffer.from([1,2,255]);socket.emit('framereceived',{payload:bytes});
+ expect(frames).toMatchObject([{raw:bytes.toString('base64')}]);expect([...bytes]).toEqual([1,2,255]);detach();
+});
