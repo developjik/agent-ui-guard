@@ -57,7 +57,13 @@ export async function replayWebSockets(page: Page, frames: readonly TransportFra
   const speed = options.speed ?? 0;
   if (!Number.isFinite(speed) || speed < 0) throw new Error('speed must be finite and nonnegative');
   const groups = new Map<number, TransportFrame[]>();
-  for (const frame of frames) { const group = groups.get(frame.connection) ?? []; group.push(frame); groups.set(frame.connection, group); }
+  for (const source of frames) {
+    if (source.transport !== 'websocket' || !Number.isInteger(source.connection) || source.connection < 0 || !Number.isFinite(source.at) || source.at < 0 || typeof source.url !== 'string' || typeof source.raw !== 'string' || !['sent', 'received'].includes(source.direction) || !['text', 'base64'].includes(source.encoding)) throw new Error('Invalid WebSocket recording frame');
+    const frame = structuredClone(source);
+    const group = groups.get(frame.connection) ?? [];
+    if (group.length && (group[0]!.url !== frame.url || group[group.length - 1]!.at > frame.at)) throw new Error('Inconsistent WebSocket connection recording');
+    group.push(frame); groups.set(frame.connection, group);
+  }
   const pending = [...groups.values()];
   await page.routeWebSocket(options.url ?? /./, route => {
     const index = pending.findIndex(group => group[0]?.url === route.url());
@@ -71,10 +77,11 @@ export async function replayWebSockets(page: Page, frames: readonly TransportFra
         const frame = group[cursor++]!;
         if (speed > 0) await wait(Math.max(0, frame.at - previous) / speed);
         previous = frame.at;
-        if (!closed) { route.send(frame.encoding === 'base64' ? Buffer.from(frame.raw, 'base64') : frame.raw); options.onFrame?.(frame); }
+        if (!closed) { route.send(frame.encoding === 'base64' ? Buffer.from(frame.raw, 'base64') : frame.raw); options.onFrame?.(structuredClone(frame)); }
       }
     };
-    route.onClose(() => { closed = true; for (const [timer, resolve] of timers) { clearTimeout(timer); resolve(); } timers.clear(); });
+    const stop = () => { closed = true; for (const [timer, resolve] of timers) { clearTimeout(timer); resolve(); } timers.clear(); };
+    route.onClose(stop);
     route.onMessage(message => {
       queue = queue.then(async () => {
         const expected = group[cursor];
@@ -83,10 +90,10 @@ export async function replayWebSockets(page: Page, frames: readonly TransportFra
         if (!expected || expected.direction !== 'sent' || expected.raw !== raw || expected.encoding !== encoding) {
           closed = true; await route.close({ code: 1008, reason: 'Recorded client message mismatch' }); return;
         }
-        options.onFrame?.(expected); cursor++; previous = expected.at; await deliver();
-      }).catch(() => { closed = true; });
+        options.onFrame?.(structuredClone(expected)); cursor++; previous = expected.at; await deliver();
+      }).catch(stop);
     });
-    queue = deliver();
+    queue = deliver().catch(stop);
   });
 }
 
