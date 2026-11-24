@@ -36,6 +36,7 @@ export interface StepInfo {
 }
 
 export interface RunOptions {
+  webSocket?: import('./guard.js').GuardOptions['webSocket'];
   page: Page;
   /** Where the app under test lives. */
   url: string;
@@ -154,6 +155,7 @@ export async function runExploration(options: RunOptions): Promise<RunResult> {
 
   const guard = await Guard.install(page, {
     contract: options.contract,
+    webSocket: options.webSocket,
     settleTimeoutMs: options.settleTimeoutMs,
     activityGraceMs: options.activityGraceMs,
     ignoreErrors: options.ignoreErrors,
