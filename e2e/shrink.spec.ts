@@ -47,3 +47,32 @@ test('time and attempt bounds keep original; replay errors are not accepted as t
   expect(throws.status).toBe('unreproducible');
   expect(await readFile(result.artifacts!.trace, 'utf8')).toBe(raw);
 });
+
+
+test('deadline interrupts an already-started action and closes its context', async ({ page, browser, demo }) => {
+  const result = await runExploration({ page, url: await demo('double-modal'), actions: demoActions,
+    plan: [{ action: 'openSettings' }, { action: 'openCommandPalette' }],
+    invariants: [singleModalAtATime()], activityGraceMs: 1, writeArtifacts: false });
+  const trace = { version: 1 as const, tool: 'agent-ui-guard' as const, toolVersion: '0.1.1', seed: result.seed,
+    url: page.url(), viewport: null, createdAt: '', finishedAt: null, steps: result.steps, violation: result.violation,
+    observations: { consoleErrors: [], pageErrors: [], http5xx: [] } };
+  let started = false;
+  const count = browser.contexts().length;
+  const before = Date.now();
+  const shrink = await shrinkTrace({ trace, browser, options: { timeBudgetMs: 700 }, run: { url: trace.url,
+    actions: demoActions.map(a => a.name === 'openSettings' ? { ...a, run: async ({ page: p }) => { started = true; await p.waitForTimeout(10000); } } : a),
+    invariants: [singleModalAtATime()], activityGraceMs: 1 } });
+  expect(started).toBe(true);
+  expect(shrink.status).toBe('timed-out');
+  expect(Date.now() - before).toBeLessThan(2500);
+  await expect.poll(() => browser.contexts().length).toBe(count);
+});
+
+test('no-artifacts also suppresses successful reduction files', async ({ page, demo }) => {
+  const url = await demo('double-modal');
+  const result = await runExploration({ page, url, actions: demoActions, plan: [{ action: 'pressEscape' }, { action: 'openSettings' }, { action: 'openCommandPalette' }],
+    invariants: [singleModalAtATime()], activityGraceMs: 1, writeArtifacts: false, shrink: { timeBudgetMs: 10000 } });
+  expect(result.artifacts).toBeUndefined();
+  expect(result.shrink?.status).toBe('reduced');
+  expect(result.shrink?.artifacts).toBeUndefined();
+});
