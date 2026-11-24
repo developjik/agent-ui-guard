@@ -38,9 +38,11 @@ export function recordWebSockets(page: Page, options: { map?: StreamMapper; onFr
   const onSocket = (socket: PlaywrightWebSocket) => {
     const id = connection++;
     const receive = (direction: TransportFrame['direction']) => ({ payload }: { payload: string | Buffer }) => {
-      const event = (options.map ?? normalizeStreamEvent)(payload);
-      options.onFrame({ transport: 'websocket', connection: id, url: socket.url(), direction, at: Date.now() - start,
-        encoding: typeof payload === 'string' ? 'text' : 'base64', raw: typeof payload === 'string' ? payload : payload.toString('base64'), ...(event ? { event } : {}) });
+      const at = Date.now() - start;
+      const raw = typeof payload === 'string' ? payload : payload.toString('base64');
+      const event = (options.map ?? normalizeStreamEvent)(typeof payload === 'string' ? payload : Buffer.from(payload));
+      options.onFrame({ transport: 'websocket', connection: id, url: socket.url(), direction, at,
+        encoding: typeof payload === 'string' ? 'text' : 'base64', raw, ...(event ? { event } : {}) });
     };
     const sent = receive('sent'); const received = receive('received');
     socket.on('framesent', sent); socket.on('framereceived', received);
@@ -64,7 +66,7 @@ export async function replayWebSockets(page: Page, frames: readonly TransportFra
     if (group.length && (group[0]!.url !== frame.url || group[group.length - 1]!.at > frame.at)) throw new Error('Inconsistent WebSocket connection recording');
     group.push(frame); groups.set(frame.connection, group);
   }
-  const pending = [...groups.values()];
+  const pending = [...groups.entries()].sort(([a], [b]) => a - b).map(([, group]) => group);
   await page.routeWebSocket(options.url ?? /./, route => {
     const index = pending.findIndex(group => group[0]?.url === route.url());
     if (index < 0) { void route.close({ code: 1008, reason: 'No recording for this connection' }); return; }
