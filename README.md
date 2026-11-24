@@ -426,3 +426,7 @@ are still returned. Recorded WebSocket frames are replayed in their original
 request order without contacting the live server. Removing a prerequisite request
 can reject a later request, so transport-dependent sequences may not shrink fully.
 The demo answer-completion check is armed only after an assistant answer exists.
+
+## Synthetic streamscope integration
+
+The opt-in [stream chaos PoC](examples/streamscope-chaos/README.md) runs a real local streamscope replay against a synthetic Playwright fixture. A normal control, delayed finish and socket disconnect use the same seed, action plan and UI invariant. Repeated disconnects must produce the same violating invariant and step. Each run keeps the source hash, replay plan, seed, fault scenario, report and rerun command together, including evidence for expected fixture failures. A separate CI job builds a pinned companion commit; neither package needs a release or a default-command change. This is synthetic wiring validation, not a claim about real-app fault discovery.
